@@ -34,6 +34,7 @@ class YOLO(nn.Module):
         score_thresh: float = 0.05,
         nms_thresh: float = 0.5,
         detections_per_img: int = 300,
+        export_without_postprocessing: bool = False
     ):
         super().__init__()
         if not hasattr(backbone, "out_channels"):
@@ -69,6 +70,8 @@ class YOLO(nn.Module):
         # used only on torchscript mode
         self._has_warned = False
 
+        self.export_without_postprocessing = export_without_postprocessing
+
     @torch.jit.unused
     def eager_outputs(
         self,
@@ -98,14 +101,17 @@ class YOLO(nn.Module):
                 like `scores`, `labels` and `mask` (for Mask R-CNN models).
         """
         # get the features from the backbone
-        print(samples.shape)
         features = self.backbone(samples)
 
         # compute the yolo heads outputs using the features
-        head_outputs = self.head(features)
+        head_outputs = self.head(features)       
 
         # create the set of anchors
         anchors_tuple = self.anchor_generator(features)
+
+        if self.export_without_postprocessing:
+            return head_outputs, anchors_tuple
+
         losses = {}
         detections: List[Dict[str, Tensor]] = []
 
