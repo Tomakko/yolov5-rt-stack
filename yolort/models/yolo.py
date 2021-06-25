@@ -23,8 +23,8 @@ class YOLO(nn.Module):
         self,
         backbone: nn.Module,
         num_classes: int,
-        anchor_grids: List[List[int]],
         # Anchor parameters
+        anchor_grids: Optional[List[List[float]]] = None,
         anchor_generator: Optional[nn.Module] = None,
         head: Optional[nn.Module] = None,
         # Training parameter
@@ -44,13 +44,20 @@ class YOLO(nn.Module):
                 "same for all the levels)")
         self.backbone = backbone
 
+        strides: List[int] = [8, 16, 32]
+
+        if anchor_grids is None:
+            anchor_grids: List[List[float]] = [
+                [10, 13, 16, 30, 33, 23],
+                [30, 61, 62, 45, 59, 119],
+                [116, 90, 156, 198, 373, 326],
+            ]
+
         if anchor_generator is None:
-            strides: List[int] = [8, 16, 32]
             anchor_generator = AnchorGenerator(strides, anchor_grids)
         self.anchor_generator = anchor_generator
 
         if loss_calculator is None:
-            strides: List[int] = [8, 16, 32]
             loss_calculator = SetCriterion(strides, anchor_grids)
         self.compute_loss = loss_calculator
 
